@@ -1,0 +1,67 @@
+# Plus Mobile — plusmobile.store
+# Static Astro site on Spaceship shared hosting (LiteSpeed / Apache-compatible, cPanel).
+# Copied to the site root as ".htaccess" by deploy/make-release.cjs.
+
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+
+# Correct types for modern images and the bundled fonts
+AddType image/avif .avif
+AddType image/webp .webp
+AddType font/woff2 .woff2
+AddType font/woff .woff
+AddDefaultCharset utf-8
+AddCharset utf-8 .css .js .xml .txt
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# 0) SSL certificate checks (AutoSSL / Let's Encrypt) must never be redirected
+RewriteRule ^\.well-known/ - [L]
+
+# 1) One canonical address: https://plusmobile.store (no www).
+#    Only the real domain is redirected, so the hosting's temporary/preview address keeps working.
+RewriteCond %{HTTP_HOST} ^www\.plusmobile\.store$ [NC]
+RewriteRule ^ https://plusmobile.store%{REQUEST_URI} [R=301,L]
+
+RewriteCond %{HTTP_HOST} ^plusmobile\.store$ [NC]
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://plusmobile.store%{REQUEST_URI} [R=301,L]
+
+# 2) Old ".html" addresses -> clean addresses. Uses the ORIGINAL request line, so it cannot loop
+#    with rule 4 (which serves the .html file internally).
+RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
+RewriteRule ^ / [R=301,L]
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+# 3) Trailing slash -> no trailing slash, only when that page exists (e.g. /iphone/ -> /iphone)
+RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+RewriteRule ^(.+)/$ /$1 [R=301,L]
+
+# 4) Clean address -> the page file (e.g. /iphone -> iphone.html, /iphone/iphone-17 -> iphone/iphone-17.html)
+RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+RewriteRule ^(.+)$ /$1.html [L]
+</IfModule>
+
+# Security headers (same as the previous Netlify settings)
+<IfModule mod_headers.c>
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set X-Frame-Options "DENY"
+Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+<FilesMatch "\.(html|xml|txt)$">
+Header set Cache-Control "public, max-age=0, must-revalidate"
+</FilesMatch>
+<FilesMatch "\.(png|jpg|ico)$">
+Header set Cache-Control "public, max-age=2592000"
+</FilesMatch>
+</IfModule>
+
+# Compression (LiteSpeed also compresses automatically)
+<IfModule mod_deflate.c>
+AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript application/xml text/xml text/plain image/svg+xml
+</IfModule>

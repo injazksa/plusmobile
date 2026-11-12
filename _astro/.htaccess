@@ -1,0 +1,5 @@
+# Plus Mobile — /_astro/ holds build files whose names change whenever their content changes,
+# so browsers may keep them for a year. Copied to "_astro/.htaccess" by deploy/make-release.cjs.
+<IfModule mod_headers.c>
+Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>
